@@ -372,7 +372,8 @@ def air_cargo_p3() -> AirCargoProblem:
     init = FluentState(pos, neg)
     #This is the implication
     goal = [expr('At(C1, JFK)'),
-            expr('At(C2, SFO)'),
             expr('At(C3, JFK)'),
+            expr('At(C2, SFO)'),
             expr('At(C4, SFO)'),
             ]
+    return AirCargoProblem(cargos, planes, airports, init, goal)
