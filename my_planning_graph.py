@@ -201,7 +201,7 @@ def mutexify(node1: PgNode, node2: PgNode):
 class PlanningGraph():
     '''
     A planning graph as described in chapter 10 of the AIMA text. The planning
-    graph can be used to reason about 
+    graph can be used to reason about
     '''
 
     def __init__(self, problem: Problem, state: str, serial_planning=True):
@@ -311,6 +311,17 @@ class PlanningGraph():
         #   set iff all prerequisite literals for the action hold in S0.  This can be accomplished by testing
         #   to see if a proposed PgNode_a has prenodes that are a subset of the previous S level.  Once an
         #   action node is added, it MUST be connected to the S node instances in the appropriate s_level set.
+        actions = self.all_actions
+        nodes_to_add = []
+        for action in actions:
+            a_node = PgNode_a(action)
+            #testing to see if a proposed PgNode_a has prenodes that are a subset of the previous S level
+            if a_node.prenodes.issubset(self.s_levels[level]):
+                nodes_to_add.append(a_node)
+                for s_node in self.s_levels[level]:
+                    s_node.children.add(a_node)
+                    a_node.parents.add(s_node)
+        self.a_levels.append(nodes_to_add)
 
     def add_literal_level(self, level):
         ''' add an S (literal) level to the Planning Graph
@@ -329,6 +340,16 @@ class PlanningGraph():
         #   may be "added" to the set without fear of duplication.  However, it is important to then correctly create and connect
         #   all of the new S nodes as children of all the A nodes that could produce them, and likewise add the A nodes to the
         #   parent sets of the S nodes
+        nodes_to_add = []
+        # every A node in the previous level has a list of S nodes in effnodes
+        for a_node in self.a_levels[level-1]:
+            for s_node in a_node.effnodes:
+                #likewise add the A nodes to the parent sets of the S nodes
+                nodes_to_add.append(s_node)
+                s_node.parents.add(a_node)
+                # create and connect all of the new S nodes as children of all the A nodes
+                a_node.children.add(s_node)
+        self.s_levels.append(nodes_to_add)
 
     def update_a_mutex(self, nodeset):
         ''' Determine and update sibling mutual exclusion for A-level nodes
@@ -387,11 +408,19 @@ class PlanningGraph():
         :return: bool
         '''
         # TODO test for Inconsistent Effects between nodes
+        #Check if actions of a1 negate actions of a2
+        for effect in node_a1.action.effect_add:
+            if effect in node_a2.action.effect_rem:
+                return True
+        #check if actions of a2 negate action effects of a1
+        for effect in node_a2.action.effect_add:
+            if effect in node_a1.action.effect_rem:
+                return True
         return False
 
     def interference_mutex(self, node_a1: PgNode_a, node_a2: PgNode_a) -> bool:
         '''
-        Test a pair of actions for mutual exclusion, returning True if the 
+        Test a pair of actions for mutual exclusion, returning True if the
         effect of one action is the negation of a precondition of the other.
 
         HINT: The Action instance associated with an action node is accessible
@@ -404,6 +433,25 @@ class PlanningGraph():
         :return: bool
         '''
         # TODO test for Interference between nodes
+        # Test a pair of actions for mutual exclusion, returning True if the
+        # effect of one action is the negation of a precondition of the other.
+
+        # We assume that we have to check bidirectionaly <=>
+
+        # We check for the negative literals of an action
+        for effect in node_a1.action.effect_rem:
+            if effect in node_a2.action.precond_pos:
+                return True
+        for effect in node_a2.action.effect_rem:
+            if effect in node_a1.action.precond_pos:
+                return True
+        # We check for the possitive literals of an action
+        for effect in node_a1.action.effect_add:
+            if effect in node_a2.action.precond_neg:
+                return True
+        for effect in node_a2.action.effect_add:
+            if effect in node_a1.action.precond_neg:
+                return True
         return False
 
     def competing_needs_mutex(self, node_a1: PgNode_a, node_a2: PgNode_a) -> bool:
