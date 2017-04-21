@@ -340,12 +340,12 @@ class PlanningGraph():
         #   may be "added" to the set without fear of duplication.  However, it is important to then correctly create and connect
         #   all of the new S nodes as children of all the A nodes that could produce them, and likewise add the A nodes to the
         #   parent sets of the S nodes
-        nodes_to_add = []
+        nodes_to_add = set()
         # every A node in the previous level has a list of S nodes in effnodes
         for a_node in self.a_levels[level-1]:
             for s_node in a_node.effnodes:
                 #likewise add the A nodes to the parent sets of the S nodes
-                nodes_to_add.append(s_node)
+                nodes_to_add.add(s_node)
                 s_node.parents.add(a_node)
                 # create and connect all of the new S nodes as children of all the A nodes
                 a_node.children.add(s_node)
@@ -550,4 +550,18 @@ class PlanningGraph():
         level_sum = 0
         # TODO implement
         # for each goal in the problem, determine the level cost, then add them together
+        """The level sum heuristic, following the subgoal
+            independence assumption, returns the sum of the level costs of the goals"""
+        for goal in self.problem.goal:
+            level = 0
+            flag = True
+            while level < len(self.s_levels) and flag:
+                for state in self.s_levels[level]:
+                    if goal == state.literal:
+                        flag = False
+                        # According to readings pg 397 We can estimate the cost
+                        #of achieving any goal literal as the level at which it
+                        #first appears in the planning graph
+                        level_sum =+ level
+                level += 1
         return level_sum
