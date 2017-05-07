@@ -205,8 +205,10 @@ class AirCargoProblem(Problem):
         """
         possible_actions = []
         kb = PropKB()
+        # We add to the Knowledge Base all the possible actions for the given state
         kb.tell(decode_state(state, self.state_map).pos_sentence())
-        for action in self.actions_list:
+        for action in kb.clauses:
+            # We don't check the preconditions, just add all the nodes possible actions
             possible_actions.append(action)
         return possible_actions
 
@@ -226,7 +228,7 @@ class AirCargoProblem(Problem):
         example, consider' """
         count = 0
         actions_on_state = self.actions_no_preconditions(node.state)
-        goals = list(self.goal)
+        goals = self.goal
         for clause in goals:
             if clause not in actions_on_state:
                 count += 1
