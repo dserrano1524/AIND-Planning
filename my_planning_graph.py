@@ -313,11 +313,14 @@ class PlanningGraph():
         #   action node is added, it MUST be connected to the S node instances in the appropriate s_level set.
         actions = self.all_actions
         nodes_to_add = []
+        # Iterating over all possible actions
         for action in actions:
             a_node = PgNode_a(action)
             #testing to see if a proposed PgNode_a has prenodes that are a subset of the previous S level
             if a_node.prenodes.issubset(self.s_levels[level]):
                 nodes_to_add.append(a_node)
+                # Reviewers suggestion is confusing as adding for a in self.a_levels[levels]
+                # returns an index out of bounds error.
                 for s_node in self.s_levels[level]:
                     s_node.children.add(a_node)
                     a_node.parents.add(s_node)
@@ -350,6 +353,19 @@ class PlanningGraph():
                 # create and connect all of the new S nodes as children of all the A nodes
                 a_node.children.add(s_node)
         self.s_levels.append(nodes_to_add)
+
+        #Reviewers alternative suggestion
+        #self.s_levels.append(set())
+        # determine all possible literal S nodes based on effects in A level
+        #for a_node in self.a_levels[level - 1]:
+        #    self.s_levels[level] |= (a_node.effnodes)
+        # connect the A and S nodes
+        #for a in self.a_levels[level - 1]:
+        #    for s in self.s_levels[level]:
+        #        if s in a.effnodes:
+        #            s.parents.add(a)
+        #            a.children.add(s)
+
 
     def update_a_mutex(self, nodeset):
         ''' Determine and update sibling mutual exclusion for A-level nodes
@@ -454,6 +470,13 @@ class PlanningGraph():
                 return True
         return False
 
+        #Reviewers suggestion
+        #for pos_pre in node_a1.action.precond_pos:
+        #    for neg_effect in node_a2.action.effect_rem:
+        #        if pos_pre == neg_effect:
+        #            return True
+
+
     def competing_needs_mutex(self, node_a1: PgNode_a, node_a2: PgNode_a) -> bool:
         '''
         Test a pair of actions for mutual exclusion, returning True if one of
@@ -542,7 +565,7 @@ class PlanningGraph():
 
         return cond
 
-    def h_levelsum(self) -> int:
+    def h_levelsum_mine(self) -> int:
         '''The sum of the level costs of the individual goals (admissible if goals independent)
 
         :return: int
@@ -565,3 +588,23 @@ class PlanningGraph():
                         level_sum =+ level
                 level += 1
         return level_sum
+
+    def h_levelsum(self) -> int:
+        '''The sum of the level costs of the individual goals (admissible if goals independent)
+           This is the code implementation suggested by the reviewer to improve it's execution time
+        :return: int
+        '''
+        level_sum = 0
+        # TODO implement
+        # for each goal in the problem, determine the level cost, then add them together
+        for g in self.problem.goal:
+            level_sum += self.level_cost(g)
+        # GOLD END
+        return level_sum
+
+    def level_cost(self, g):
+        for i, level in enumerate(self.s_levels):
+            level_literal_set = set(n.literal for n in level)
+            if g in level_literal_set:
+                return i
+        return 0 # none found
